@@ -6,7 +6,8 @@ from MarkovChain import *
 def generate_music():
     directory_name = "musicInput"
 
-    order = 1
+    order = 3
+    rhythm_order = 8
     number_notes = 1000
     xml_data = import_music_xml(directory_name)
     melody_data = get_melody_data(xml_data)
@@ -17,7 +18,7 @@ def generate_music():
     melody_sequence, rhythm_sequence = generate_music_melody_rhythm(test_melody_rhythm_data, order, number_notes)
 
     stream2 = stream.Stream()
-    stream2.append(tempo.MetronomeMark(number=500))
+    #stream2.append(tempo.MetronomeMark(number=500))
     test_count = 0
     for note_name in melody_sequence:
         if note_name == "R":
@@ -42,7 +43,7 @@ def generate_music():
     s2.show()
 
     melody_sequence = generate_melody(melody_data, order, number_notes)
-    rhythm_sequence = generate_rhythm("MARKOV", rhythm_data, 5, number_notes)
+    rhythm_sequence = generate_rhythm("MARKOV", rhythm_data, rhythm_order, number_notes)
 
     stream1 = stream.Stream()
     test_count = 0
@@ -242,6 +243,8 @@ def generate_rhythm(mode: str, rhythm_data: list, order: int, number_notes: int)
         return rhythm_sequence
     elif mode == "ORIGINAL":  # Uses original rhythm data, cannot produce sequence longer than original piece for now.
         return rhythm_data
+    elif mode == "CONSTANT":  # Uses a constant Eighth note
+        print()
     print()
 
 
