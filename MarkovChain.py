@@ -74,7 +74,7 @@ class MarkovChain(object):
         return next_state
 
     def generate_sequence(self, current_state: str, number_steps: int) -> list:
-        current_state = self.states[0]  # TEMPORARY _______________________________________
+        current_state = np.random.choice(self.states, p=self.initial_probability)
         state_sequence = [current_state]
         for i in range(number_steps):
             next_state = self.next_state(state_sequence[i])
