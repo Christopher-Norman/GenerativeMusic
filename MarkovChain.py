@@ -64,11 +64,15 @@ class MarkovChain(object):
 
         self.initial_probability /= np.sum(self.initial_probability)
 
+        # Invert Probabilities Test
+        # self.initial_probability = np.ones(self.initial_probability.shape) - self.initial_probability
+        # self.initial_probability /= np.sum(self.initial_probability)
+
     def next_state(self, current_state: str) -> str:
         """
         Chooses the next state based on the current state
         :param current_state: name of the current node in sequence
-        :return: next_state: random next state in sequence based on probabilities in the transition matrix
+        :return next_state: random next state in sequence based on probabilities in the transition matrix
         """
         next_state = np.random.choice(self.states, p=self.transition_matrix[self.index_dict[current_state], :])
         return next_state

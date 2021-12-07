@@ -5,68 +5,60 @@ from MarkovChain import *
 
 def generate_music():
     directory_name = "musicInput"
+    # directory_name = input("Input data directory location:\n")
 
-    order = 3
-    rhythm_order = 8
-    number_notes = 1000
     xml_data = import_music_xml(directory_name)
-    melody_data = get_melody_data(xml_data)
-    rhythm_data = get_rhythm_data(xml_data)
+
     #chord_stream = get_chord_data(xml_data)
 
-    test_melody_rhythm_data = get_joint_melody_rhythm_data(xml_data)
-    melody_sequence, rhythm_sequence = generate_music_melody_rhythm(test_melody_rhythm_data, order, number_notes)
+    number_notes = int(input("Number of notes to generate:"))
 
-    stream2 = stream.Stream()
-    #stream2.append(tempo.MetronomeMark(number=500))
-    test_count = 0
+    print("Choose generation method:\n\t1. Combined rhythm and melody model\n\t2. Independent rhythm and melody")
+    generation_method = int(input())
+
+    output_stream = stream.Stream()
+
+    if generation_method == 1:  # Combined rhythm and melody model
+        order = int(input("Order of Markov chain (>0): "))
+        melody_rhythm_data = get_joint_melody_rhythm_data(xml_data)
+        melody_sequence, rhythm_sequence = generate_music_melody_rhythm(melody_rhythm_data, order, number_notes)
+
+    elif generation_method == 2:  # Independent rhythm and melody model
+        print("Choose method of rhythm generation:\n\t1. MARKOV\n\t2. ORIGINAL\n\t3. Constant")
+        rhythm_generation_method = input()
+        order = int(input("Order of melody Markov Chain (>0): "))
+        rhythm_order = int(input("Order of rhythm Markov chain (>0): "))
+        melody_data = get_melody_data(xml_data)
+        rhythm_data = get_rhythm_data(xml_data)
+        melody_sequence = generate_melody(melody_data, order, number_notes)
+        rhythm_sequence = generate_rhythm("MARKOV", rhythm_data, rhythm_order, number_notes)
+
+    note_count = 0
     for note_name in melody_sequence:
         if note_name == "R":
             n = note.Rest()
         else:
             n = note.Note(note_name)
 
-        if str(rhythm_sequence[test_count]) == "complex":
-            n.duration = duration.Duration("quarter")
+        if str(rhythm_sequence[note_count]) == "complex":
+            n.duration = duration.Duration("16th")
         else:
-            n.duration = duration.Duration(rhythm_sequence[test_count])
-        test_count += 1
-        stream2.append(n)
+            n.duration = duration.Duration(rhythm_sequence[note_count])
 
-    stream2.timeSignature = meter.TimeSignature('4/4')
-    # stream2.keySignature = key.Key('e-')
-    # stream2.show()
+        # n.duration = duration.Duration(rhythm_sequence[note_count])
+        note_count += 1
+        output_stream.append(n)
 
-    s2 = stream.Score(id='mainScore')
-    s2.insert(0, stream2)
-    #s2.insert(chord_stream)
-    s2.show()
-
-    melody_sequence = generate_melody(melody_data, order, number_notes)
-    rhythm_sequence = generate_rhythm("MARKOV", rhythm_data, rhythm_order, number_notes)
-
-    stream1 = stream.Stream()
-    test_count = 0
-    for note_name in melody_sequence:
-        if note_name == "R":
-            n = note.Rest()
-        else:
-            n = note.Note(note_name)
-
-        n.duration = duration.Duration(rhythm_sequence[test_count])
-        test_count += 1
-        stream1.append(n)
-
-    stream1.timeSignature = meter.TimeSignature('12/8')
-    stream1.keySignature = key.Key('e-')
+    output_stream.timeSignature = meter.TimeSignature('4/4')
+    output_stream.keySignature = key.Key('e-')
 
     s = stream.Score(id='mainScore')
 
-    p0 = stream1
-    # p1 = chord_stream
+    p0 = output_stream
+    #p1 = chord_stream
 
     s.insert(0, p0)
-    # s.insert(0, p1)
+    #s.insert(0, p1)
     s.show()
 
 
@@ -249,4 +241,5 @@ def generate_rhythm(mode: str, rhythm_data: list, order: int, number_notes: int)
 
 
 if __name__ == '__main__':
+    print("MARKOV CHAIN MUSIC GENERATOR\n")
     generate_music()
