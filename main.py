@@ -4,16 +4,17 @@ from MarkovChain import *
 
 
 def generate_music():
-    directory_name = "musicInput"
+    directory_name = "maryInput"
     # directory_name = input("Input data directory location:\n")
 
     xml_data = import_music_xml(directory_name)
-
-    #chord_stream = get_chord_data(xml_data)
+    print(xml_data)
+    # chord_stream = get_chord_data(xml_data)
 
     number_notes = int(input("Number of notes to generate:"))
 
-    print("Choose generation method:\n\t1. Combined rhythm and melody model\n\t2. Independent rhythm and melody")
+    print("Choose generation method:\n\t1. Combined rhythm and melody model\n\t2. Independent rhythm and melody\n\t3. "
+          "Uniform random melody")
     generation_method = int(input())
 
     output_stream = stream.Stream()
@@ -33,6 +34,10 @@ def generate_music():
         melody_sequence = generate_melody(melody_data, order, number_notes)
         rhythm_sequence = generate_rhythm("MARKOV", rhythm_data, rhythm_order, number_notes)
 
+    elif generation_method == 3:  # Uniform random sample
+        melody_rhythm_data = get_joint_melody_rhythm_data(xml_data)
+        melody_sequence, rhythm_sequence = generate_music_uniform(melody_rhythm_data, 1, number_notes)
+
     note_count = 0
     for note_name in melody_sequence:
         if note_name == "R":
@@ -45,21 +50,25 @@ def generate_music():
         else:
             n.duration = duration.Duration(rhythm_sequence[note_count])
 
-        # n.duration = duration.Duration(rhythm_sequence[note_count])
+        n.duration = duration.Duration(rhythm_sequence[note_count])
         note_count += 1
         output_stream.append(n)
 
     output_stream.timeSignature = meter.TimeSignature('4/4')
-    output_stream.keySignature = key.Key('e-')
+    #output_stream.keySignature = key.Key('e-')
 
-    s = stream.Score(id='mainScore')
+    output_stream.show()
+    #s = stream.Score(id='mainScore')
+    #mm1 = tempo.MetronomeMark(number=40)
+    #s.append(mm1)
 
     p0 = output_stream
     #p1 = chord_stream
 
-    s.insert(0, p0)
+    #s.insert(0, output_stream)
     #s.insert(0, p1)
-    s.show()
+
+    #s.show()
 
 
 def import_music_xml(directory_name: str) -> list:
@@ -68,7 +77,7 @@ def import_music_xml(directory_name: str) -> list:
     """
     xml_data = []
     for file in os.listdir(directory_name):
-        if file.endswith(".xml") or file.endswith(".mxl") or file.endswith(".mid"):
+        if file.endswith(".xml") or file.endswith(".mxl") or file.endswith(".mid") or file.endswith(".abc"):
             xml_data.append(converter.parse(directory_name + '/' + file))  # Converts MusicXML to a music21 stream
 
     return xml_data
@@ -86,6 +95,7 @@ def get_melody_data(xml_data: list) -> list:
         p = file.parts[0].getElementsByClass(
             stream.Measure)
         # Take the treble clef only from each file (should be melody)
+        file.parts[0].show()
         for n in file.parts[0].recurse().notesAndRests:
             rhythm_data.append(n.duration)
             if type(n) is note.Note:
@@ -145,6 +155,7 @@ def get_rhythm_data(xml_data: list) -> list:
 
     for file in xml_data:
         for n in file.parts[0].recurse().notesAndRests:  # Recurse through each note in each file
+            n.duration.linked = False
             rhythm_data.append(n.duration.type)  # Gets the duration type of each note
 
     return rhythm_data
@@ -159,6 +170,7 @@ def get_joint_melody_rhythm_data(xml_data: list) -> list:
 
     for file in xml_data:
         for n in file.parts[0].recurse().notesAndRests:
+            n.duration.linked = False
             rhythm_data.append(n.duration)
             if type(n) is note.Note:
                 melody_data.append(str(n.pitch) + "," + str(n.duration.type))
@@ -181,7 +193,7 @@ def generate_music_melody_rhythm(melody_data: list, order: int, number_notes: in
     melody_markov_chain = MarkovChain(order, melody_data)
     melody_markov_chain.create_transition_matrix()
 
-    melody_note_sequence = melody_markov_chain.generate_sequence("", number_notes)
+    melody_note_sequence = melody_markov_chain.generate_sequence(number_notes)
 
     melody_note_sequence_reduced = [x.split("|") for x in melody_note_sequence]
 
@@ -200,7 +212,7 @@ def generate_melody(melody_data: list, order: int, number_notes: int) -> list:
     melody_markov_chain = MarkovChain(order, melody_data)
     melody_markov_chain.create_transition_matrix()
 
-    melody_note_sequence = melody_markov_chain.generate_sequence("", number_notes)
+    melody_note_sequence = melody_markov_chain.generate_sequence(number_notes)
 
     melody_note_sequence_reduced = [x.split("|") for x in melody_note_sequence]
     melody_note_sequence_main = [x[order - 1] for x in melody_note_sequence_reduced]
@@ -224,7 +236,7 @@ def generate_rhythm(mode: str, rhythm_data: list, order: int, number_notes: int)
         rhythm_markov_chain = MarkovChain(order, rhythm_data)
         rhythm_markov_chain.create_transition_matrix()
 
-        rhythm_sequence = rhythm_markov_chain.generate_sequence("", number_notes)
+        rhythm_sequence = rhythm_markov_chain.generate_sequence(number_notes)
 
         rhythm_sequence_reduced = [x.split("|") for x in rhythm_sequence]
         rhythm_sequence_main = [x[order - 1] for x in rhythm_sequence_reduced]
@@ -238,6 +250,30 @@ def generate_rhythm(mode: str, rhythm_data: list, order: int, number_notes: int)
     elif mode == "CONSTANT":  # Uses a constant Eighth note
         print()
     print()
+
+
+def generate_music_uniform(melody_data: list, order: int, number_notes: int):
+    """
+    Generates melody and its rhythm in a single Markov chain using uniform random sample
+    :param melody_data: list of notes and their duration
+    :param order: Markov chain order
+    :param number_notes: Number of notes to be generated in the sequence
+    :return: Returns two lists, one containing pitch data and the second containing note duration data
+    """
+    melody_markov_chain = MarkovChain(order, melody_data)
+    melody_markov_chain.create_transition_matrix()
+
+    #  This time do not use Markov transition matrix and instead uniform random
+    melody_note_sequence = melody_markov_chain.generate_uniform_random_sequence(number_notes)
+
+    melody_note_sequence_reduced = [x.split("|") for x in melody_note_sequence]
+
+    melody_note_sequence_main = [x[order - 1] for x in melody_note_sequence_reduced]
+    melody_note_sequence_start = melody_note_sequence_reduced[0][0:order - 1]
+    melody_sequence = melody_note_sequence_start + melody_note_sequence_main
+    melody_sequence = [x.split(",") for x in melody_sequence]
+
+    return [x[0] for x in melody_sequence], [x[1] for x in melody_sequence]
 
 
 if __name__ == '__main__':

@@ -77,11 +77,29 @@ class MarkovChain(object):
         next_state = np.random.choice(self.states, p=self.transition_matrix[self.index_dict[current_state], :])
         return next_state
 
-    def generate_sequence(self, current_state: str, number_steps: int) -> list:
+    def generate_sequence(self, number_steps: int) -> list:
+        """
+        Generates sequence of nodes from random walk using Markov Chain transition matrix
+        :param number_steps: number of nodes to generate in the output sequence
+        :return state_sequence: returns a sequence of random nodes names in a list
+        """
+        # Choose random node based on frequency
         current_state = np.random.choice(self.states, p=self.initial_probability)
         state_sequence = [current_state]
         for i in range(number_steps):
             next_state = self.next_state(state_sequence[i])
             state_sequence.append(next_state)
-            current_state = next_state
+        return state_sequence
+
+    def generate_uniform_random_sequence(self, number_steps: int) -> list:
+        """
+        Generates sequence of nodes with a uniformly random selection
+        :param number_steps: number of nodes to generate in the output sequence
+        :return state_sequence: returns a sequence of uniformly random nodes
+        """
+        current_state = np.random.choice(self.states)
+        state_sequence = [current_state]
+        for i in range(number_steps):
+            next_state = np.random.choice(self.states)
+            state_sequence.append(next_state)
         return state_sequence
