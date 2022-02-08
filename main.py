@@ -4,11 +4,10 @@ from MarkovChain import *
 
 
 def generate_music():
-    directory_name = "maryInput"
+    directory_name = "musicInput"
     # directory_name = input("Input data directory location:\n")
 
     xml_data = import_music_xml(directory_name)
-    print(xml_data)
     # chord_stream = get_chord_data(xml_data)
 
     number_notes = int(input("Number of notes to generate:"))
@@ -25,14 +24,18 @@ def generate_music():
         melody_sequence, rhythm_sequence = generate_music_melody_rhythm(melody_rhythm_data, order, number_notes)
 
     elif generation_method == 2:  # Independent rhythm and melody model
-        print("Choose method of rhythm generation:\n\t1. MARKOV\n\t2. ORIGINAL\n\t3. Constant")
+        print("Choose method of rhythm generation:\n\tMARKOV\n\tORIGINAL\n\tCONSTANT")
         rhythm_generation_method = input()
         order = int(input("Order of melody Markov Chain (>0): "))
-        rhythm_order = int(input("Order of rhythm Markov chain (>0): "))
-        melody_data = get_melody_data(xml_data)
+
+        rhythm_order = 1  # Default rhythm Markov chain order
+        if rhythm_generation_method == "MARKOV":
+            rhythm_order = int(input("Order of rhythm Markov chain (>0): "))
+
         rhythm_data = get_rhythm_data(xml_data)
+        rhythm_sequence = generate_rhythm(rhythm_generation_method, rhythm_data, rhythm_order, number_notes)
+        melody_data = get_melody_data(xml_data)
         melody_sequence = generate_melody(melody_data, order, number_notes)
-        rhythm_sequence = generate_rhythm("MARKOV", rhythm_data, rhythm_order, number_notes)
 
     elif generation_method == 3:  # Uniform random sample
         melody_rhythm_data = get_joint_melody_rhythm_data(xml_data)
@@ -55,20 +58,19 @@ def generate_music():
         output_stream.append(n)
 
     output_stream.timeSignature = meter.TimeSignature('4/4')
-    #output_stream.keySignature = key.Key('e-')
+    # output_stream.keySignature = key.Key('e-')
 
     output_stream.show()
-    #s = stream.Score(id='mainScore')
-    #mm1 = tempo.MetronomeMark(number=40)
-    #s.append(mm1)
+    # s = stream.Score(id='mainScore')
+    # mm1 = tempo.MetronomeMark(number=40)
+    # s.append(mm1)
 
     p0 = output_stream
-    #p1 = chord_stream
+    # p1 = chord_stream
 
-    #s.insert(0, output_stream)
-    #s.insert(0, p1)
-
-    #s.show()
+    # s.insert(0, output_stream)
+    # s.insert(0, p1)
+    # s.show()
 
 
 def import_music_xml(directory_name: str) -> list:
@@ -92,10 +94,7 @@ def get_melody_data(xml_data: list) -> list:
     rhythm_data = []
 
     for file in xml_data:
-        p = file.parts[0].getElementsByClass(
-            stream.Measure)
         # Take the treble clef only from each file (should be melody)
-        file.parts[0].show()
         for n in file.parts[0].recurse().notesAndRests:
             rhythm_data.append(n.duration)
             if type(n) is note.Note:
@@ -222,7 +221,7 @@ def generate_melody(melody_data: list, order: int, number_notes: int) -> list:
     return melody_sequence
 
 
-def generate_rhythm(mode: str, rhythm_data: list, order: int, number_notes: int):
+def generate_rhythm(mode: str, rhythm_data: list, order: int, number_notes: int) -> list:
     """"
     Generates rhythm based on specified mode, independent of melody/pitch data.
 
@@ -236,7 +235,8 @@ def generate_rhythm(mode: str, rhythm_data: list, order: int, number_notes: int)
         rhythm_markov_chain = MarkovChain(order, rhythm_data)
         rhythm_markov_chain.create_transition_matrix()
 
-        rhythm_sequence = rhythm_markov_chain.generate_sequence(number_notes)
+        # Add 20 extra notes to compensate for difference in Markov chain length
+        rhythm_sequence = rhythm_markov_chain.generate_sequence(number_notes + 20)
 
         rhythm_sequence_reduced = [x.split("|") for x in rhythm_sequence]
         rhythm_sequence_main = [x[order - 1] for x in rhythm_sequence_reduced]
@@ -248,8 +248,10 @@ def generate_rhythm(mode: str, rhythm_data: list, order: int, number_notes: int)
     elif mode == "ORIGINAL":  # Uses original rhythm data, cannot produce sequence longer than original piece for now.
         return rhythm_data
     elif mode == "CONSTANT":  # Uses a constant Eighth note
-        print()
-    print()
+        print("Choose note length:\n\t1. quarter note\n\t2. half note\n\t3. 16th note")
+        rhythm_generation_method = int(input())
+        rhythm_sequence = ['eighth'] * (number_notes + 20)
+        return rhythm_sequence
 
 
 def generate_music_uniform(melody_data: list, order: int, number_notes: int):
