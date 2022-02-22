@@ -42,7 +42,6 @@ class MarkovChain(object):
         self.initial_probability = np.zeros(shape=number_states)  # Initial state probability vector
 
         current_state = self.states[0]
-        next_state = ""
 
         for i in range(len(self.data) - self.order):
             next_state = str(self.data[i])
@@ -59,7 +58,9 @@ class MarkovChain(object):
 
         for row in range(self.transition_matrix.shape[0]):
             if np.sum(self.transition_matrix[row]) == 0:  # Node has zero probability so add 1 to each row entry
-                self.transition_matrix[row] = 1  # Might change this in future
+                self.transition_matrix[row] = 1  # Prevents absorbing states
+                # Second option for preventing absorbing states
+                # self.transition_matrix[row] = self.initial_probability
             self.transition_matrix[row] /= np.sum(self.transition_matrix[row])
 
         self.initial_probability /= np.sum(self.initial_probability)
@@ -83,7 +84,7 @@ class MarkovChain(object):
         :param number_steps: number of nodes to generate in the output sequence
         :return state_sequence: returns a sequence of random nodes names in a list
         """
-        # Choose random node based on frequency
+        # Choose random initial node based on frequency
         current_state = np.random.choice(self.states, p=self.initial_probability)
         state_sequence = [current_state]
         for i in range(number_steps):
